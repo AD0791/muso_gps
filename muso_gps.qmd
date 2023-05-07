@@ -63,7 +63,6 @@ from dotenv import load_dotenv
 
 ```{python}
 #| label: commcare cnnection
-#| include: false
 #| eval: true
 
 load_dotenv()
