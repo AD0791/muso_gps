@@ -139,6 +139,7 @@ style_table.set_properties(
 )
 style_table.set_properties(
     ["Proportion"],
-    **{'background':'black', 'color':'white'}
+    **{'background':'black', 'color':'white', 'border':'1.3px solid white'}
 )
+style_table
 ```
