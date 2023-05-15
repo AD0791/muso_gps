@@ -14,6 +14,7 @@ body{
 ```{r}
 #| label: setup
 
+
 Sys.setenv(TZ='GMT')
 options(digits = 2)
 suppressPackageStartupMessages(library(RMySQL))
@@ -63,7 +64,7 @@ from dotenv import load_dotenv
 
 ```{python}
 #| label: commcare cnnection
-#| eval: true
+
 
 load_dotenv()
 email = os.getenv('COMMCARE_USERNAME')
@@ -94,7 +95,7 @@ driver.find_element(By.XPATH,'//*[@id="download-progress"]/div/div/div[2]/div[1]
 
 ```{python}
 #| label: quicl the driver
-#| eval: true
+
 
 driver.quit()
 ```
@@ -103,6 +104,9 @@ driver.quit()
 
 ```{r}
 #| label: get the gps data
+#| echo: false
+#| include: false
+#| eval: true
 
 part1="~/Downloads/"
 part2="Muso_groupes _GPS "
