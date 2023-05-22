@@ -13,7 +13,10 @@ body{
 
 ```{r}
 #| label: setup
-
+#| echo: false
+#| warning: false
+#| include: false
+#| eval: true
 
 Sys.setenv(TZ='GMT')
 options(digits = 2)
@@ -49,6 +52,10 @@ loadfonts()
 
 ```{python}
 #| label: module and frameworks for python
+#| echo: false
+#| warning: false
+#| include: false
+#| eval: true
 
 import pandas as pd
 import numpy as np
@@ -63,8 +70,11 @@ from dotenv import load_dotenv
 
 
 ```{python}
-#| label: commcare cnnection
-
+#| label: commcare connection
+#| echo: false
+#| warning: false
+#| include: false
+#| eval: true
 
 load_dotenv()
 email = os.getenv('COMMCARE_USERNAME')
@@ -95,6 +105,10 @@ driver.find_element(By.XPATH,'//*[@id="download-progress"]/div/div/div[2]/div[1]
 
 ```{python}
 #| label: quicl the driver
+#| echo: false
+#| warning: false
+#| include: false
+#| eval: true
 
 
 driver.quit()

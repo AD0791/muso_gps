@@ -2,7 +2,6 @@ project:
   output-dir: _output
   render:
     - "muso_gps.qmd"
-    - "!gps_report.qmd"
     - "!Readme.md"
 toc: true
 toc-depth: 4
