@@ -1,0 +1,303 @@
+---
+title: "MUSO GPS"
+subtitle: "| Caris Foundation International | Impact Youth Project"
+author: "Alexandro Disla  | M&E Officer"
+output-file: "muso_gps_11092023.html"
+---
+
+<style>
+body{
+  text-align: justify
+}
+</style>
+
+
+```{r}
+#| label: setup
+#| echo: false
+#| warning: false
+#| include: false
+#| eval: true
+
+Sys.setenv(TZ='GMT')
+options(digits = 2)
+suppressPackageStartupMessages(library(RMySQL))
+suppressPackageStartupMessages(library(odbc))
+suppressPackageStartupMessages(library(DBI))
+suppressPackageStartupMessages(library(viridis))
+suppressPackageStartupMessages(library(ggrepel))
+suppressPackageStartupMessages(library(ggiraphExtra))
+suppressPackageStartupMessages(library(hrbrthemes))
+suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(extrafont))
+suppressPackageStartupMessages(library(tmap))
+suppressPackageStartupMessages(library(leaflet)) 
+suppressPackageStartupMessages(library(leaflet.extras))
+suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(kableExtra))
+suppressPackageStartupMessages(library(readxl))
+suppressPackageStartupMessages(library(reticulate))
+suppressPackageStartupMessages(library(sf))
+
+
+#use_python('/usr/local/opt/python@3.10/bin/python3')
+use_python('/usr/local/bin/python3')
+
+loadfonts()
+```
+
+
+```{python}
+#| label: module and frameworks for python
+#| echo: false
+#| warning: false
+#| include: false
+#| eval: true
+
+import pandas as pd
+import numpy as np
+from datetime import datetime 
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+import time
+import os
+from dotenv import load_dotenv
+```
+
+
+```{python}
+#| label: commcare connection
+#| echo: false
+#| warning: false
+#| include: false
+#| eval: true
+
+load_dotenv()
+email = os.getenv('COMMCARE_USERNAME')
+password_cc = os.getenv('COMMCARE_PASSWORD')
+
+#Defining the driver
+#driver = webdriver.Chrome(ChromeDriverManager().install())
+driver = webdriver.Chrome()
+driver.implicitly_wait(1000)
+
+#Creating login function
+def commcare_login():
+    driver.get(
+        'https://www.commcarehq.org/a/caris-test/data/export/custom/new/case/download/c6bf8477aadc01e8034f62066beb0a6d/'
+    )
+    driver.find_element(By.XPATH,'//*[@id="id_auth-username"]').send_keys(email)
+    driver.find_element(By.XPATH,'//*[@id="id_auth-password"]').send_keys(password_cc)
+    driver.find_element(By.CSS_SELECTOR,'button[type=submit]').click()
+       
+commcare_login()
+
+#Download the database "Muso_groupes_GPS"
+driver.find_element(By.XPATH,'//*[@id="download-export-form"]/form/div[2]/div/div[2]/div[1]/button/span[1]').click()
+driver.find_element(By.XPATH,'//*[@id="download-progress"]/div/div/div[2]/div[1]/form/a/span[1]').click()
+
+
+```
+
+
+```{python}
+#| label: quicl the driver
+#| echo: false
+#| warning: false
+#| include: false
+#| eval: true
+
+
+driver.quit()
+```
+
+
+
+```{r}
+#| label: get the gps data
+#| echo: false
+#| include: false
+#| eval: true
+
+part1="~/Downloads/"
+part2="Muso_groupes _GPS "
+df_muso<-read_excel(paste(part1,part2,sep="",Sys.Date(),".xlsx"),sheet = 1)
+df_muso$is_inactive[is.na(df_muso$is_inactive)]<-0
+df_muso$is_graduated[is.na(df_muso$is_graduated)]<-0
+df_muso$gps[is.na(df_muso$gps)]<-'---'
+
+df_muso1<-df_muso%>%
+  filter(is_graduated != '1' 
+         & is_inactive !='1'
+         & closed == 'FALSE')%>%
+  select(caseid,name,gps,gps_date,office,commune_name,office_name,officer_name,is_inactive)%>%
+  mutate(code_GPS=ifelse(gps=="---" | gps=="","no","yes"))
+
+df_muso2<-df_muso%>%
+  filter(!is_graduated %in% '1')%>%
+  select(caseid,name,gps,gps_date,office,commune_name,office_name,officer_name,is_inactive)%>%
+  filter(!is_inactive %in% "1")%>%
+  mutate(code_GPS=ifelse(gps=="---" | gps=="","no","yes"))
+
+#df_muso<-rbind(df_muso1,df_muso2)
+df_muso<-df_muso1
+df_muso$office_name[df_muso$office_name == '0']<-'---'
+
+yes<-df_muso%>%
+  filter(code_GPS %in% "yes")
+```
+
+### **Overview**
+
+Sur `r length(df_muso$code_GPS)` groupes actifs de MUSO, `r length(yes$code_GPS)` ont déjà un code GPS soit `r paste(round(length(yes$code_GPS)/length(df_muso$code_GPS)*100,2),sep="","%")`. Ci-après un petit tableau synoptique:
+
+### **Tableau 1 - Statistiques globales**
+
+```{r}
+df_gps<-data.frame(Indicateur=c("Groupes actifs de MUSO recensés à ce jour",
+                                "Groupes actifs de MUSO avec coordonnées GPS",
+                                "Groupes actifs de MUSO sans coordonnées GPS"
+                                ),
+                   Total=c(length(df_muso$code_GPS),length(yes$code_GPS),
+                           length(df_muso$code_GPS)-length(yes$code_GPS)),
+                   Proportion=c("100%",
+                        paste0(round(length(yes$code_GPS)/length(df_muso$code_GPS)*100,1),"%"),
+                        paste0(100-round(length(yes$code_GPS)/length(df_muso$code_GPS)*100,1),"%")))
+
+
+df_gps %>%
+  knitr::kable()%>%
+    kable_styling(bootstrap_options = "striped" , full_width = F , position = "center") %>%
+  kable_styling(bootstrap_options = "bordered", full_width = F , position ="center") %>%
+  column_spec(2,bold = T ) %>%
+  column_spec(3,bold =T ,color = "white" , background ="black")
+```
+
+### **Fig.1 Evolution de la performance des agents de terrain de MUSO à travers le temps**
+
+```{r}
+#| warning: false
+
+ggplotly(df_muso %>%
+           filter(code_GPS %in% "yes")%>%
+           mutate(day = as.Date.factor(gps_date)) %>%
+           filter(!is.na(day))%>%
+           count(day) %>%
+           ggplot(aes(x = day, y = n),fill="#00AFBB")+
+           geom_line(stat = "identity", 
+                     color= "#00AFBB",size=0.5) +
+           geom_point() +
+           ylab("Performance per day") +
+           xlab("Date") +
+           theme_classic()+
+           theme(
+             axis.title.x = element_text(family="Cambria",size=9),
+             axis.title.y = element_text(family="Cambria",size=9))
+)
+```
+
+### **Fig.2 Distribution des bureaux avec des codes GPS déjà saisis ou non**
+
+
+```{r, fig.height=6, fig.width=8}
+
+df_muso1<-df_muso%>%
+    filter(office %in% c("PAP","GON","JER","BOM","CAP","CAY","PDP"))%>%
+    filter(!office_name %in% c("PAP","GON","JER","BOM","CAP","CAY","PDP"))%>%
+  select(-office_name)
+  
+
+df_muso2<-df_muso%>%
+  filter(!office %in% c("PAP","GON","JER","BOM","CAP","CAY","PDP"))%>%
+  filter(office_name %in% c("PAP","GON","JER","BOM","CAP","CAY","PDP"))%>%
+  select(-office)%>%
+  rename(office=office_name)
+
+df_muso$office_name = ifelse(df_muso$office_name=="---",df_muso$office,df_muso$office_name)
+
+
+df_muso%>%
+  filter(!is.na(code_GPS))%>%
+  group_by(office_name,code_GPS)%>%
+  count()%>%
+  group_by(office_name)%>%
+  mutate(proc = (n/sum(n) * 100))%>%
+  ggplot(aes(fill=code_GPS, y=n, x=reorder(office_name,-n))) + 
+  geom_bar(stat="identity",color="black",show.legend = T) +
+  geom_label(aes(label = paste(paste(format(n,big.mark = ",")),sep=" ",
+                               paste("(",sep="",round(proc,0),"%)"))),
+             position =  position_stack(vjust = 0.5), show.legend = F,color='white', size=3.2)+
+  scale_fill_brewer(palette = "Dark2")+
+  ggtitle(" ")+
+  labs(caption=paste("Data source: CommCare",sep = " / ", Sys.Date()))+
+  theme_bw()+
+  theme(
+    plot.title = element_text(color = "black", size = 13,  face = "bold",hjust=0.5,vjust=0.8),
+    plot.caption = element_text(face="italic",size = 10),
+    axis.text.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    strip.text = element_text(size = 12))+
+  xlab("")+
+  ylab("")
+
+```
+
+### **Fig.3 Cartographie interactive des groupes actifs de MUSO dont les coordonnées GPS sont déjà collectées sur le terrain**
+
+
+```{r, fig.dim=c(8,8)}
+#| warning: false
+carte<-yes%>%
+  select(name,commune_name, officer_name, gps)
+
+split_coord<-str_split_fixed(carte$gps, " ", 3)
+split_coord<-as.data.frame(split_coord)
+split_coord<-split_coord%>%
+  select(V1,V2)%>%
+  rename(lat=V1)%>%
+  rename(lon=V2)
+
+split_coord<-cbind(carte,split_coord)
+
+split_coord$lat<-as.numeric(split_coord$lat)
+split_coord$lon<-as.numeric(split_coord$lon)
+
+split_coord1<-split_coord%>%
+  group_by(lat,lon,name,commune_name, gps)%>%
+  count()
+
+
+#leaflet(split_coord1,options = leafletOptions(zoomControl = TRUE,minZoom = 3.3, maxZoom = 15)) %>%
+leaflet(split_coord1,options = leafletOptions(zoomControl = TRUE,minZoom = 3.3, maxZoom = 15)) %>%
+ setView(lng = -72.3333,lat = 18.6667, zoom=8)   %>%
+ addTiles() %>%
+ addCircles(radius = ~10^3/10, weight = 3, color = "#777777", fillOpacity = 1, 
+            popup = ~paste0(commune_name," | ",name, " | ", "GPS: ", gps))%>%
+ addProviderTiles(providers$CartoDB.DarkMatter) %>% 
+ addHeatmap(lng=~lon,lat=~lat,intensity=~n,max=100,radius=20,blur=20) 
+```
+
+
+
+
+### **Tableau 2 - Table des groupes actifs de MUSO avec des coordonnées GPS ou non**
+
+```{r}
+muso_table<-df_muso%>%
+  select(caseid,name,gps,gps_date,office_name,commune_name,code_GPS, officer_name)
+
+datatable(muso_table, filter = 'bottom', extensions = 'Buttons',
+          options = list(dom = 'Bfrtip',width="120px",
+                         columnDefs = list(list(className = 'dt-center', targets = "_all")),
+                         initComplete = JS(
+                           "function(settings, json) {",
+                           "$(this.api().table().header()).css({'background-color': '#0B1E2A', 'color': '#fff'});",
+                           "}"),
+                         buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),pageLength = 6))
+```
+
