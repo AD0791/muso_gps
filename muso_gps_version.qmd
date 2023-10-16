@@ -2,7 +2,7 @@
 title: "MUSO GPS"
 subtitle: "| Caris Foundation International | Impact Youth Project"
 author: "Alexandro Disla  | M&E Officer"
-output-file: "muso_gps_09102023.html"
+output-file: "muso_gps_16102023.html"
 ---
 
 <style>
@@ -111,6 +111,9 @@ driver.find_element(By.XPATH,'//*[@id="download-progress"]/div/div/div[2]/div[1]
 #| warning: false
 #| include: false
 #| eval: true
+
+from time import sleep
+sleep(3)
 
 
 driver.quit()
